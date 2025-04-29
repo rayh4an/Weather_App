@@ -92,7 +92,7 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: AppColors.accentTan,
       appBar: AppBar(
         title: Text(_isRegistering ? 'Register' : 'Welcome Back!'),
-        backgroundColor: AppColors.primaryBlue,
+        backgroundColor: Theme.of(context).primaryColor,
       ),
       body: Center(
         child: Card(
@@ -133,7 +133,7 @@ class _LoginPageState extends State<LoginPage> {
                   ElevatedButton(
                     onPressed: _submit,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryBlue,
+                      backgroundColor: Theme.of(context).primaryColor,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
