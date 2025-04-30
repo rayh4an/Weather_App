@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -206,13 +207,13 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
     } else if (condition.toLowerCase().contains("cloud")) {
       return Colors.blueGrey.shade100;
     } else if (hour >= 6 && hour < 12) {
-      return const Color.fromARGB(255, 234, 235, 133); // Morning
+      return const Color.fromARGB(255, 234, 235, 133);
     } else if (hour >= 12 && hour < 18) {
-      return const Color.fromARGB(255, 118, 183, 235); // Afternoon
+      return const Color.fromARGB(255, 118, 183, 235);
     } else if (hour >= 18 && hour < 20) {
-      return const Color.fromARGB(255, 33, 144, 248); // Evening
+      return const Color.fromARGB(255, 33, 144, 248);
     } else {
-      return const Color.fromARGB(255, 37, 120, 161); // Night
+      return const Color.fromARGB(255, 37, 120, 161);
     }
   }
 
@@ -236,7 +237,6 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
           ),
     );
   }
-
   Widget _buildHourlyForecast() {
     final List<dynamic> list = weatherData?['list'] ?? [];
 
@@ -244,41 +244,42 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Hourly Forecast',
+          'Hourly Forecast (Next 24 Hours)',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
         SizedBox(
-          height: 120,
+          height: 140,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            itemCount: 12,
+            itemCount: 8,
             itemBuilder: (context, index) {
               if (index >= list.length) return const SizedBox();
               final hourData = list[index];
-              final time = (hourData['dt_txt'] as String)
-                  .split(' ')[1]
-                  .substring(0, 5);
+              final dt = DateTime.parse(hourData['dt_txt']);
+              final time = DateFormat('EEE h a').format(dt);
               final temp = (hourData['main']['temp'] as num).toStringAsFixed(0);
-              final icon = (hourData['weather'][0]['icon'] as String);
+              final icon = hourData['weather'][0]['icon'] as String;
 
               return Container(
-                width: 80,
-                margin: const EdgeInsets.symmetric(horizontal: 8),
+                width: 100,
+                margin: const EdgeInsets.symmetric(horizontal: 6),
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor.withOpacity(0.8),
+                  color: Theme.of(context).cardColor.withOpacity(0.85),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(time),
+                    Text(time, style: const TextStyle(fontSize: 12)),
                     Image.network(
                       'https://openweathermap.org/img/wn/$icon@2x.png',
-                      width: 50,
-                      height: 50,
+                      width: 40,
+                      height: 40,
                     ),
-                    Text('$temp°'),
+                    const SizedBox(height: 4),
+                    Text('$temp°', style: const TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
               );
@@ -289,12 +290,26 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
     );
   }
 
+
+
   Widget _buildDailyForecast() {
     final List<dynamic> list = weatherData?['list'] ?? [];
-    final days =
-        list
-            .where((entry) => (entry['dt_txt'] as String).contains('12:00:00'))
-            .toList();
+
+    final Map<String, List<dynamic>> grouped = {};
+
+    for (var entry in list) {
+      final date = (entry['dt_txt'] as String).split(' ')[0];
+      grouped.putIfAbsent(date, () => []).add(entry);
+    }
+
+    final days = grouped.entries.map((e) {
+      final entries = e.value;
+      final midday = entries.firstWhere(
+        (x) => (x['dt_txt'] as String).contains('12:00:00'),
+        orElse: () => entries.first,
+      );
+      return midday;
+    }).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,6 +344,7 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
       ],
     );
   }
+
 
   void _submitFeedback() async {
     final feedback = _feedbackController.text.trim();
@@ -516,7 +532,7 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
                             hintText: 'Describe the weather...',
                             border: OutlineInputBorder(),
                             filled: true,
-                            fillColor: Colors.white, // sets background to white
+                            fillColor: Colors.white,
                           ),
                           maxLines: 3,
                         ),
@@ -564,7 +580,7 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
                             }
                             final docs = snapshot.data!.docs;
                             return Container(
-                              height: 300, // Adjust height as needed
+                              height: 300,
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
                                 color: Colors.white.withOpacity(0.6),
@@ -646,7 +662,7 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
                               ),
                               child: Stack(
                                 children: [
-                                  // User-selected image near the top-right with padding
+                                  
                                   if (_selectedImage != null)
                                     Positioned(
                                       top: 8,

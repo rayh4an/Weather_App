@@ -146,7 +146,7 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Theme.of(context).primaryColor,
         child: const Icon(Icons.add),
       ),
-      body: Container( // ✅ WRAP the entire body in Container
+      body: Container(
         decoration: backgroundImage != null
             ? BoxDecoration(
                 image: DecorationImage(

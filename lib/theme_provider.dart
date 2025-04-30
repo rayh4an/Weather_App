@@ -10,12 +10,12 @@ class ThemeProvider with ChangeNotifier {
   WallpaperOption _selectedWallpaper = WallpaperOption.defaultTheme;
 
   ThemeProvider() {
-    // ✅ Listen to login/logout
+
     FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {
         _loadWallpaper(user);
       } else {
-        // Reset to default if user logs out
+
         _selectedWallpaper = WallpaperOption.defaultTheme;
         _currentTheme = AppThemes.defaultTheme;
         notifyListeners();
