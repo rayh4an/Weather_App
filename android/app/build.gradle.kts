@@ -10,7 +10,7 @@ plugins {
 android {
     namespace = "com.example.mad"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -23,11 +23,13 @@ android {
 
     defaultConfig {
         applicationId = "com.example.mad"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        minSdk = 21 // ✅ REQUIRED for mapbox_gl
+        targetSdk = 33
+        versionCode = 1
+        versionName = "1.0"
     }
+
+
 
     buildTypes {
         release {
