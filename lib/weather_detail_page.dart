@@ -12,6 +12,8 @@ import 'dart:io';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
 
 class WeatherDetailPage extends StatefulWidget {
   final String city;
@@ -25,8 +27,21 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
   Map<String, dynamic>? weatherData;
   bool isLoading = true;
   bool isCelsius = true;
+  Uint8List? _selectedImage;
+
   final _feedbackController = TextEditingController();
   final ScreenshotController _screenshotController = ScreenshotController();
+  String getWeatherImage(String condition) {
+    condition = condition.toLowerCase();
+    if (condition.contains('rain')) return 'assets/rainy_bg.jpg';
+    if (condition.contains('snow')) return 'assets/snowy_bg.jpg';
+    if (condition.contains('cloud')) return 'assets/cloudy_bg.jpg';
+    if (condition.contains('wind')) return 'assets/windy_bg.jpg';
+    if (condition.contains('sun') || condition.contains('clear')) {
+      return 'assets/sunny_bg.jpg';
+    }
+    return 'assets/default_bg.jpg';
+  }
 
   final user = FirebaseAuth.instance.currentUser;
 
@@ -67,6 +82,18 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
     }
 
     _fetchWeather();
+  } //
+
+  //
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes();
+      setState(() {
+        _selectedImage = bytes;
+      });
+    }
   }
 
   Future<void> _fetchWeather() async {
@@ -159,6 +186,33 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
 
     if (triggeredAlerts.isNotEmpty) {
       _showCombinedAlert(triggeredAlerts);
+    }
+  }
+
+  Color getBackgroundColor() {
+    if (weatherData == null) return Colors.grey.shade300;
+
+    final timestamp = (weatherData!['list'][0]['dt'] as int) * 1000;
+    final dateTime =
+        DateTime.fromMillisecondsSinceEpoch(timestamp, isUtc: true).toLocal();
+    final hour = dateTime.hour;
+
+    final condition = weatherData!['list'][0]['weather'][0]['main'] as String;
+
+    if (condition.toLowerCase().contains("rain")) {
+      return const Color.fromARGB(255, 138, 136, 136);
+    } else if (condition.toLowerCase().contains("snow")) {
+      return Colors.blueGrey.shade300;
+    } else if (condition.toLowerCase().contains("cloud")) {
+      return Colors.blueGrey.shade100;
+    } else if (hour >= 6 && hour < 12) {
+      return const Color.fromARGB(255, 234, 235, 133); // Morning
+    } else if (hour >= 12 && hour < 18) {
+      return const Color.fromARGB(255, 118, 183, 235); // Afternoon
+    } else if (hour >= 18 && hour < 20) {
+      return const Color.fromARGB(255, 33, 144, 248); // Evening
+    } else {
+      return const Color.fromARGB(255, 37, 120, 161); // Night
     }
   }
 
@@ -308,15 +362,21 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
           isLoading
               ? const Center(child: CircularProgressIndicator())
               : Container(
-                decoration:
-                    backgroundImage != null
-                        ? BoxDecoration(
-                          image: DecorationImage(
+                decoration: BoxDecoration(
+                  image:
+                      backgroundImage != null
+                          ? DecorationImage(
                             image: AssetImage(backgroundImage),
                             fit: BoxFit.cover,
-                          ),
-                        )
-                        : null,
+                            colorFilter: ColorFilter.mode(
+                              getBackgroundColor().withOpacity(0.6),
+                              BlendMode.srcOver,
+                            ),
+                          )
+                          : null,
+                  color: getBackgroundColor(),
+                ),
+
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: SingleChildScrollView(
@@ -455,18 +515,34 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
                           decoration: const InputDecoration(
                             hintText: 'Describe the weather...',
                             border: OutlineInputBorder(),
+                            filled: true,
+                            fillColor: Colors.white, // sets background to white
                           ),
                           maxLines: 3,
                         ),
+
                         const SizedBox(height: 10),
-                        ElevatedButton(
+                        ElevatedButton.icon(
                           onPressed: _submitFeedback,
+                          icon: const Icon(
+                            Icons.send,
+                            color: Color.fromRGBO(0, 0, 0, 1),
+                          ),
+                          label: const Text(
+                            'Submit Feedback',
+                            style: TextStyle(
+                              color: Color.fromARGB(255, 0, 0, 0),
+                            ),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Theme.of(context).primaryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 15,
+                              horizontal: 20,
+                            ),
                           ),
-                          child: const Text('Submit Feedback'),
                         ),
+
                         const SizedBox(height: 20),
                         const Text(
                           'What Others Are Seeing:',
@@ -528,6 +604,23 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        const SizedBox(height: 15),
+                        ElevatedButton(
+                          onPressed: _pickImage,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).primaryColor,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 15,
+                              horizontal: 20,
+                            ),
+                          ),
+                          child: const Text(
+                            'Add Image to Postcard',
+                            style: TextStyle(
+                              color: Color.fromARGB(255, 0, 0, 0),
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 10),
                         Card(
                           elevation: 4,
@@ -538,43 +631,81 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
                             controller: _screenshotController,
                             child: Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.all(20),
+                              height: 250,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(16),
-                                color: Colors.blueAccent,
+                                image: DecorationImage(
+                                  image: AssetImage(
+                                    getWeatherImage(
+                                      weatherData?['list'][0]['weather'][0]['description'] ??
+                                          '',
+                                    ),
+                                  ),
+                                  fit: BoxFit.cover,
+                                ),
                               ),
-                              child: Column(
+                              child: Stack(
                                 children: [
-                                  const Text(
-                                    'Current Weather Mood',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      color: Colors.white,
+                                  // User-selected image near the top-right with padding
+                                  if (_selectedImage != null)
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.memory(
+                                          _selectedImage!,
+                                          width: 110,
+                                          height: 110,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    '${weatherData?['list'][0]['main']['temp'].toStringAsFixed(0)}°',
-                                    style: const TextStyle(
-                                      fontSize: 50,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    weatherData?['list'][0]['weather'][0]['description'] ??
-                                        '',
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    'Shared by: ${user?.email ?? "User"}',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.white70,
+                                  // Main content centered
+                                  Center(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Text(
+                                          'Current Weather',
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            color: Color.fromARGB(255, 0, 0, 0),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          '${weatherData?['list'][0]['main']['temp'].toStringAsFixed(0)}°',
+                                          style: const TextStyle(
+                                            fontSize: 50,
+                                            color: Color.fromARGB(255, 0, 0, 0),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          weatherData?['list'][0]['weather'][0]['description'] ??
+                                              '',
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            color: Color.fromARGB(
+                                              255,
+                                              44,
+                                              44,
+                                              44,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          'Shared by: ${user?.email ?? "User"}',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Color.fromARGB(179, 0, 0, 0),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
@@ -599,11 +730,22 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
                               XFile(imagePath.path),
                             ], text: 'Check out the weather!');
                           },
-                          icon: const Icon(Icons.share),
-                          label: const Text('Share Weather'),
+                          icon: const Icon(
+                            Icons.share,
+                            color: Color.fromARGB(255, 0, 0, 0),
+                          ),
+                          label: const Text(
+                            'Share Weather',
+                            style: TextStyle(
+                              color: Color.fromARGB(255, 0, 0, 0),
+                            ),
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Theme.of(context).primaryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 15,
+                              horizontal: 20,
+                            ),
                           ),
                         ),
                       ],
