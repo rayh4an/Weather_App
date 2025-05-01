@@ -178,7 +178,10 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
 
     for (var forecast in list) {
       final description = forecast['weather'][0]['description'] as String;
-      final temp = forecast['main']['temp'] as num;
+      double temp = (forecast['main']['temp'] as num).toDouble();
+      if (isCelsius) {
+        temp = (temp * 9 / 5) + 32;
+      }
 
       if (rainAlert &&
           description.toLowerCase().contains('rain') &&
@@ -194,15 +197,18 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
       }
       if (temp >= highTempAlert && !heatAdded) {
         triggeredAlerts.add(
-          '🔥 High temperature alert: Above $highTempAlert°!',
+          '🔥 High temperature alert: Above $highTempAlert°F!',
         );
         heatAdded = true;
       }
       if (temp <= lowTempAlert && !coldAdded) {
-        triggeredAlerts.add('🧊 Low temperature alert: Below $lowTempAlert°!');
+        triggeredAlerts.add(
+          '🧊 Low temperature alert: Below $lowTempAlert°F!',
+        );
         coldAdded = true;
       }
     }
+
 
     if (triggeredAlerts.isNotEmpty) {
       _showCombinedAlert(triggeredAlerts);
