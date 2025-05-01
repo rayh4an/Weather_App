@@ -15,6 +15,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
+import 'package:intl/intl.dart';
 
 class WeatherDetailPage extends StatefulWidget {
   final String city;
@@ -29,6 +30,11 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
   bool isLoading = true;
   bool isCelsius = true;
   Uint8List? _selectedImage;
+  DateTime? sunriseTime;
+  DateTime? sunsetTime;
+  double? currentTemperature;
+  String? currentCondition;
+  String? currentIconCode;
 
   final _feedbackController = TextEditingController();
   final ScreenshotController _screenshotController = ScreenshotController();
@@ -106,11 +112,33 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        final cityInfo = data['city'];
+        final firstForecast = data['list'][0];
+
+        final sunrise =
+            DateTime.fromMillisecondsSinceEpoch(
+              cityInfo['sunrise'] * 1000,
+              isUtc: true,
+            ).toLocal();
+
+        final sunset =
+            DateTime.fromMillisecondsSinceEpoch(
+              cityInfo['sunset'] * 1000,
+              isUtc: true,
+            ).toLocal();
+
+        final currentTemp = firstForecast['main']['temp'];
+
         setState(() {
           weatherData = data;
-          lat = data['city']['coord']['lat'];
-          lon = data['city']['coord']['lon'];
+          currentTemperature = data['list'][0]['main']['temp'] as double?;
+          lat = cityInfo['coord']['lat'];
+          lon = cityInfo['coord']['lon'];
           isLoading = false;
+
+          sunriseTime = sunrise;
+          sunsetTime = sunset;
+          currentTemperature = currentTemp.toDouble();
         });
 
         _checkAlerts();
@@ -237,6 +265,7 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
           ),
     );
   }
+
   Widget _buildHourlyForecast() {
     final List<dynamic> list = weatherData?['list'] ?? [];
 
@@ -279,7 +308,10 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
                       height: 40,
                     ),
                     const SizedBox(height: 4),
-                    Text('$temp°', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      '$temp°',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ],
                 ),
               );
@@ -289,8 +321,6 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
       ],
     );
   }
-
-
 
   Widget _buildDailyForecast() {
     final List<dynamic> list = weatherData?['list'] ?? [];
@@ -302,14 +332,15 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
       grouped.putIfAbsent(date, () => []).add(entry);
     }
 
-    final days = grouped.entries.map((e) {
-      final entries = e.value;
-      final midday = entries.firstWhere(
-        (x) => (x['dt_txt'] as String).contains('12:00:00'),
-        orElse: () => entries.first,
-      );
-      return midday;
-    }).toList();
+    final days =
+        grouped.entries.map((e) {
+          final entries = e.value;
+          final midday = entries.firstWhere(
+            (x) => (x['dt_txt'] as String).contains('12:00:00'),
+            orElse: () => entries.first,
+          );
+          return midday;
+        }).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -344,7 +375,6 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
       ],
     );
   }
-
 
   void _submitFeedback() async {
     final feedback = _feedbackController.text.trim();
@@ -407,6 +437,85 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
                             color: AppColors.darkText,
                           ),
                         ),
+                        if (!isLoading) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Sunrise
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      '🌅 Sunrise',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    Text(
+                                      sunriseTime != null
+                                          ? DateFormat.jm().format(
+                                            sunriseTime!.toLocal(),
+                                          )
+                                          : '--:--',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                // Current temperature
+                                Column(
+                                  children: [
+                                    Text(
+                                      currentTemperature != null
+                                          ? '${currentTemperature!.toStringAsFixed(1)}°'
+                                          : '--°',
+                                      style: const TextStyle(
+                                        fontSize: 40,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const Text(
+                                      'Current',
+                                      style: TextStyle(fontSize: 14),
+                                    ),
+                                  ],
+                                ),
+
+                                // Sunset
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    const Text(
+                                      '🌇 Sunset',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    Text(
+                                      sunsetTime != null
+                                          ? DateFormat.jm().format(
+                                            sunsetTime!.toLocal(),
+                                          )
+                                          : '--:--',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
 
                         const SizedBox(height: 20),
                         _buildHourlyForecast(),
@@ -662,7 +771,6 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
                               ),
                               child: Stack(
                                 children: [
-                                  
                                   if (_selectedImage != null)
                                     Positioned(
                                       top: 8,
