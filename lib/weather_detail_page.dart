@@ -19,7 +19,15 @@ import 'package:intl/intl.dart';
 
 class WeatherDetailPage extends StatefulWidget {
   final String city;
-  const WeatherDetailPage({super.key, required this.city});
+  final double lat;
+  final double lon;
+
+  const WeatherDetailPage({
+    super.key,
+    this.city = '',
+    this.lat = 0.0,
+    this.lon = 0.0,
+  });
 
   @override
   State<WeatherDetailPage> createState() => _WeatherDetailPageState();
@@ -105,45 +113,44 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
 
   Future<void> _fetchWeather() async {
     final units = isCelsius ? 'metric' : 'imperial';
-    final url =
-        'https://api.openweathermap.org/data/2.5/forecast?q=${widget.city}&units=$units&appid=$apiKey';
 
     try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final cityInfo = data['city'];
-        final firstForecast = data['list'][0];
+      // Fetch real-time weather for accurate current temp
+      final currentUrl =
+          'https://api.openweathermap.org/data/2.5/weather?lat=${widget.lat}&lon=${widget.lon}&units=$units&appid=$apiKey';
+      final currentResponse = await http.get(Uri.parse(currentUrl));
 
-        final sunrise =
+      if (currentResponse.statusCode == 200) {
+        final currentData = json.decode(currentResponse.body);
+        currentTemperature = (currentData['main']['temp'] as num).toDouble();
+        sunriseTime =
             DateTime.fromMillisecondsSinceEpoch(
-              cityInfo['sunrise'] * 1000,
+              currentData['sys']['sunrise'] * 1000,
               isUtc: true,
             ).toLocal();
-
-        final sunset =
+        sunsetTime =
             DateTime.fromMillisecondsSinceEpoch(
-              cityInfo['sunset'] * 1000,
+              currentData['sys']['sunset'] * 1000,
               isUtc: true,
             ).toLocal();
+      }
 
-        final currentTemp = firstForecast['main']['temp'];
+      // Fetch 5-day / 3-hour forecast
+      final forecastUrl =
+          'https://api.openweathermap.org/data/2.5/forecast?lat=${widget.lat}&lon=${widget.lon}&units=$units&appid=$apiKey';
+      final forecastResponse = await http.get(Uri.parse(forecastUrl));
 
+      if (forecastResponse.statusCode == 200) {
+        final forecastData = json.decode(forecastResponse.body);
         setState(() {
-          weatherData = data;
-          currentTemperature = data['list'][0]['main']['temp'] as double?;
-          lat = cityInfo['coord']['lat'];
-          lon = cityInfo['coord']['lon'];
+          weatherData = forecastData;
+          lat = widget.lat;
+          lon = widget.lon;
           isLoading = false;
-
-          sunriseTime = sunrise;
-          sunsetTime = sunset;
-          currentTemperature = currentTemp.toDouble();
         });
-
         _checkAlerts();
       } else {
-        _showError('Failed to load weather data.');
+        _showError('Failed to load forecast data.');
       }
     } catch (e) {
       _showError('Error: $e');
@@ -154,23 +161,6 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  void _showAlertPopup(String title, String message) {
-    showDialog(
-      context: context,
-      builder:
-          (_) => AlertDialog(
-            title: Text(title),
-            content: Text(message),
-            actions: [
-              TextButton(
-                child: const Text('OK'),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-    );
   }
 
   void _checkAlerts() {
