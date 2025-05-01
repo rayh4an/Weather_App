@@ -123,16 +123,17 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
       if (currentResponse.statusCode == 200) {
         final currentData = json.decode(currentResponse.body);
         currentTemperature = (currentData['main']['temp'] as num).toDouble();
-        sunriseTime =
-            DateTime.fromMillisecondsSinceEpoch(
-              currentData['sys']['sunrise'] * 1000,
-              isUtc: true,
-            ).toLocal();
-        sunsetTime =
-            DateTime.fromMillisecondsSinceEpoch(
-              currentData['sys']['sunset'] * 1000,
-              isUtc: true,
-            ).toLocal();
+        final timezoneOffset = currentData['timezone'] ?? 0; // seconds
+
+        sunriseTime = DateTime.fromMillisecondsSinceEpoch(
+          (currentData['sys']['sunrise'] + timezoneOffset) * 1000,
+          isUtc: true,
+        );
+
+        sunsetTime = DateTime.fromMillisecondsSinceEpoch(
+          (currentData['sys']['sunset'] + timezoneOffset) * 1000,
+          isUtc: true,
+        );
       }
 
       // Fetch 5-day / 3-hour forecast
@@ -446,9 +447,7 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
                                     ),
                                     Text(
                                       sunriseTime != null
-                                          ? DateFormat.jm().format(
-                                            sunriseTime!.toLocal(),
-                                          )
+                                          ? DateFormat.jm().format(sunriseTime!)
                                           : '--:--',
                                       style: const TextStyle(
                                         fontSize: 18,
@@ -490,9 +489,7 @@ class _WeatherDetailPageState extends State<WeatherDetailPage> {
                                     ),
                                     Text(
                                       sunsetTime != null
-                                          ? DateFormat.jm().format(
-                                            sunsetTime!.toLocal(),
-                                          )
+                                          ? DateFormat.jm().format(sunsetTime!)
                                           : '--:--',
                                       style: const TextStyle(
                                         fontSize: 18,

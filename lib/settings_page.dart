@@ -32,7 +32,11 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadSettings() async {
     if (user == null) return;
-    final doc = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user!.uid)
+            .get();
     final data = doc.data();
     if (data != null) {
       setState(() {
@@ -55,8 +59,14 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _saveTemperatureAlerts() async {
-    await _updateUserSetting('highTempAlert', int.tryParse(_highTempController.text) ?? 100);
-    await _updateUserSetting('lowTempAlert', int.tryParse(_lowTempController.text) ?? 32);
+    await _updateUserSetting(
+      'highTempAlert',
+      int.tryParse(_highTempController.text) ?? 100,
+    );
+    await _updateUserSetting(
+      'lowTempAlert',
+      int.tryParse(_lowTempController.text) ?? 32,
+    );
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Temperature alerts updated!')),
@@ -70,7 +80,11 @@ class _SettingsPageState extends State<SettingsPage> {
     await _updateUserSetting('isCelsius', isCelsius);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Temperature unit set to ${isCelsius ? "Celsius" : "Fahrenheit"}')),
+      SnackBar(
+        content: Text(
+          'Temperature unit set to ${isCelsius ? "Celsius" : "Fahrenheit"}',
+        ),
+      ),
     );
   }
 
@@ -117,14 +131,15 @@ class _SettingsPageState extends State<SettingsPage> {
         backgroundColor: Theme.of(context).primaryColor,
       ),
       body: Container(
-        decoration: backgroundImage != null
-            ? BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage(backgroundImage),
-                  fit: BoxFit.cover,
-                ),
-              )
-            : null,
+        decoration:
+            backgroundImage != null
+                ? BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage(backgroundImage),
+                    fit: BoxFit.cover,
+                  ),
+                )
+                : null,
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: ListView(
@@ -144,7 +159,10 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildWallpaperCard(ThemeProvider themeProvider, Map<WallpaperOption, String> wallpapers) {
+  Widget _buildWallpaperCard(
+    ThemeProvider themeProvider,
+    Map<WallpaperOption, String> wallpapers,
+  ) {
     return Card(
       color: Theme.of(context).primaryColor.withOpacity(0.8),
       elevation: 4,
@@ -160,12 +178,13 @@ class _SettingsPageState extends State<SettingsPage> {
               await _updateUserSetting('selectedWallpaper', newValue.name);
             }
           },
-          items: wallpapers.entries.map((entry) {
-            return DropdownMenuItem<WallpaperOption>(
-              value: entry.key,
-              child: Text(entry.value),
-            );
-          }).toList(),
+          items:
+              wallpapers.entries.map((entry) {
+                return DropdownMenuItem<WallpaperOption>(
+                  value: entry.key,
+                  child: Text(entry.value),
+                );
+              }).toList(),
         ),
       ),
     );
